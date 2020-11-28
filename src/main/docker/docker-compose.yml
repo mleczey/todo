@@ -1,0 +1,119 @@
+version: "3.8"
+services:
+  todo:
+    container_name: todo
+    depends_on:
+      - todo-database
+    image: todo:latest
+    networks:
+      database:
+        aliases:
+          - todo
+      monitoring:
+        aliases:
+          - todo
+      security:
+        aliases:
+          - todo
+    ports:
+      - 8080:8080
+      - 8081:8081
+  todo-database:
+    container_name: todo-database
+    environment:
+      - MYSQL_DATABASE=todo
+      - MYSQL_PASSWORD=admin
+      - MYSQL_ROOT_PASSWORD=admin
+      - MYSQL_USER=admin
+    image: mysql:8.0.21
+    networks:
+      database:
+        aliases:
+          - todo-database
+      monitoring:
+        aliases:
+          - todo-database
+    ports:
+      - 3306:3306
+  keycloak:
+    container_name: keycloak
+    depends_on:
+      - keycloak-database
+    environment:
+      - DB_ADDR=keycloak-database
+      - DB_VENDOR=MYSQL
+      - DB_DATABASE=keycloak
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - JAVA_OPTS=-Djboss.socket.binding.port-offset=10
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=admin
+    image: jboss/keycloak:11.0.0
+    networks:
+      keycloak:
+        aliases:
+          - keycloak
+      monitoring:
+        aliases:
+          - keycloak
+      security:
+        aliases:
+          - keycloak
+    ports:
+      - 8090:8090
+    volumes:
+      - keycloak:/tmp
+  keycloak-database:
+    container_name: keycloak-database
+    environment:
+      - MYSQL_DATABASE=keycloak
+      - MYSQL_PASSWORD=admin
+      - MYSQL_ROOT_PASSWORD=admin
+      - MYSQL_USER=admin
+    image: mysql:8.0.21
+    networks:
+      monitoring:
+        aliases:
+          - keycloak-database
+      keycloak:
+        aliases:
+          - keycloak-database
+    ports:
+      - 3307:3306
+    volumes:
+      - keycloak-database:/var/lib/mysq
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v2.20.0
+    networks:
+      monitoring:
+        aliases:
+          - prometheust
+    ports:
+      - 9090:9090
+    volumes:
+      - ./configuration/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus:/prometheus
+  grafana:
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=root
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    image: grafana/grafana:7.1.1
+    networks:
+      monitoring:
+        aliases:
+          - grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana:/var/lib/grafana
+networks:
+  database:
+  keycloak:
+  monitoring:
+  security:
+volumes:
+  grafana:
+  keycloak:
+  keycloak-database:
